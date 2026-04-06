@@ -22,7 +22,6 @@
       text-align: center;
       color: #333;
     }
-    /* Form styling */
     .form-group {
       display: flex;
       flex-wrap: wrap;
@@ -71,7 +70,6 @@
     thead th:hover {
       background-color: #0056b3;
     }
-    /* Màu nền xen kẽ và highlight hover */
     tbody tr:nth-child(even) {
       background-color: #f9f9f9;
     }
@@ -82,52 +80,50 @@
       margin-left: 5px;
     }
   </style>
-</head>
+  </head>
 <body>
 
 <div class="container">
   <h2>Danh sách Sản phẩm</h2>
 
-  <!-- Form thêm sản phẩm -->
   <div class="form-group">
-    <input type="text" id="input-name" placeholder="Tên sản phẩm (ít nhất 3 ký tự)">
+    <input type="text" id="input-name" placeholder="Tên sản phẩm">
     <input type="text" id="input-category" placeholder="Danh mục">
-    <input type="number" id="input-price" placeholder="Đơn giá (số dương)">
-    <input type="number" id="input-quantity" placeholder="Số lượng (>= 1)">
+    <input type="number" id="input-price" placeholder="Đơn giá">
+    <input type="number" id="input-quantity" placeholder="Số lượng">
     <button id="btn-add">Thêm sản phẩm</button>
   </div>
 
-  <!-- Bảng sản phẩm -->
   <table id="product-table">
     <thead>
       <tr>
         <th>STT</th>
-        <th id="header-name">Tên sản phẩm <span class="sort-icon" id="sort-icon"></span></th>
+        <th id="header-name" data-sort="name">Tên sản phẩm <span id="sort-icon"></span></th>
         <th>Danh mục</th>
         <th>Đơn giá</th>
         <th>Số lượng</th>
       </tr>
     </thead>
-    <tbody>
-      <!-- Dữ liệu sẽ được render tại đây -->
-    </tbody>
+    <tbody></tbody>
   </table>
 </div>
 
 <script>
   let products = [];
-  let sortDirection = 0;
-  
-  window.onload = function() {
-    loadProducts();
-  };
+  let sortDirection = 0; // 0: none, 1: asc, -1: desc
+
+  loadProducts();
 
   function loadProducts() {
     const xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4 && xhr.status === 200) {
-        products = JSON.parse(xhr.responseText);
-        renderTable(products);
+        try {
+          products = JSON.parse(xhr.responseText);
+          renderTable(products);
+        } catch (e) {
+          console.error("Error parsing JSON", e);
+        }
       }
     };
     xhr.open('GET', 'products.json', true);
@@ -136,15 +132,17 @@
 
   function renderTable(data) {
     const tbody = document.querySelector('#product-table tbody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     data.forEach((item, index) => {
       const row = document.createElement('tr');
+      const formattedPrice = Number(item.price).toLocaleString('vi-VN');
       row.innerHTML = `
         <td>${index + 1}</td>
         <td>${item.name}</td>
         <td>${item.category || ''}</td>
-        <td>${Number(item.price).toLocaleString('vi-VN')}</td>
+        <td>${formattedPrice}</td>
         <td>${item.quantity}</td>
       `;
       tbody.appendChild(row);
@@ -156,11 +154,11 @@
     if (sortDirection === 1) {
       sortDirection = -1;
       products.sort((a, b) => b.name.localeCompare(a.name));
-      document.getElementById('sort-icon').innerText = '▼';
+      document.getElementById('sort-icon').innerText = ' ▼';
     } else {
       sortDirection = 1;
       products.sort((a, b) => a.name.localeCompare(b.name));
-      document.getElementById('sort-icon').innerText = '▲';
+      document.getElementById('sort-icon').innerText = ' ▲';
     }
     renderTable(products);
   });
@@ -169,32 +167,26 @@
   btnAdd.addEventListener('click', function() {
     const name = document.getElementById('input-name').value.trim();
     const category = document.getElementById('input-category').value.trim();
-    const price = parseFloat(document.getElementById('input-price').value);
-    const quantity = parseInt(document.getElementById('input-quantity').value);
+    const priceVal = document.getElementById('input-price').value;
+    const quantityVal = document.getElementById('input-quantity').value;
 
-    if (!name || name.length < 3) {
-      alert('Tên sản phẩm phải có ít nhất 3 ký tự.');
-      return;
-    }
-    if (isNaN(price) || price <= 0) {
-      alert('Đơn giá phải là số dương.');
-      return;
-    }
-    if (isNaN(quantity) || quantity < 1) {
-      alert('Số lượng phải là số nguyên >= 1.');
+    if (name.length < 3 || isNaN(priceVal) || priceVal <= 0 || isNaN(quantityVal) || quantityVal < 1) {
+      alert('Vui lòng nhập dữ liệu hợp lệ');
       return;
     }
 
     const newProduct = {
-      id: products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1,
+      id: Date.now(),
       name: name,
       category: category,
-      price: price,
-      quantity: quantity
+      price: parseFloat(priceVal),
+      quantity: parseInt(quantityVal)
     };
 
     products.push(newProduct);
     renderTable(products);
+    
+    // Clear inputs
     document.getElementById('input-name').value = '';
     document.getElementById('input-category').value = '';
     document.getElementById('input-price').value = '';
